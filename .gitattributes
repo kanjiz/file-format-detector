@@ -1,0 +1,7 @@
+# Set default text file handling
+* text=auto
+# Treat HTML, JS, CSS as UTF-8
+*.html text eol=lf
+*.js text eol=lf
+*.css text eol=lf
+*.md text eol=lf
