@@ -15,3 +15,6 @@ Thumbs.db
 # HTML/JS/CSS artifacts
 *.min.js
 *.min.css
+# But include third-party libraries
+!lib/*.min.js
+!lib/*.min.css
