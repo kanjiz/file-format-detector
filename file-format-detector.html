@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ファイル形式理解ツール</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+  <style>
+    :root {
+      --bg-primary: #1a1a1a;
+      --bg-secondary: #2d2d2d;
+      --bg-tertiary: #333333;
+      --bg-quaternary: #383838;
+      --bg-hover: #404040;
+      --text-primary: #ffffff;
+      --text-secondary: #e0e0e0;
+      --text-muted: #cccccc;
+      --text-subtle: #b0b0b0;
+      --border-primary: #404040;
+      --border-secondary: #555555;
+      --accent-blue: #4a90e2;
+      --accent-green: #4caf50;
+      --accent-red: #f44336;
+      --font-mono: 'Courier New', monospace;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "BIZ UDPゴシック", "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", "Meiryo UI", sans-serif;
+      font-size: 24px;
+      background: var(--bg-primary);
+      color: var(--text-secondary);
+      min-height: 100vh;
+      padding: 20px;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      border: 1px solid var(--border-primary);
+    }
+
+    header {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      padding: 30px;
+      text-align: center;
+      border-bottom: 1px solid var(--border-primary);
+
+      h1 {
+        font-size: 2.2em;
+        margin-bottom: 10px;
+        font-weight: 600;
+      }
+
+      p {
+        font-size: 1.1em;
+        color: var(--text-muted);
+      }
+    }
+
+    .content {
+      padding: 40px;
+    }
+
+    .file-areas {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 30px;
+      margin-bottom: 40px;
+    }
+
+    .file-area {
+      border: 2px dashed var(--border-secondary);
+      border-radius: 8px;
+      padding: 40px 20px;
+      text-align: center;
+      transition: border-color 0.3s ease, background-color 0.3s ease;
+      min-height: 200px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      background: var(--bg-quaternary);
+
+      &:hover {
+        border-color: var(--accent-blue);
+        background: var(--bg-hover);
+      }
+
+      &.dragover {
+        border-color: var(--accent-blue);
+        background: var(--bg-hover);
+      }
+
+      h3 {
+        color: var(--text-primary);
+        margin-bottom: 15px;
+        font-size: 1.3em;
+        font-weight: 500;
+      }
+
+      p {
+        color: var(--text-subtle);
+        margin-bottom: 20px;
+      }
+    }
+
+    .file-info {
+      text-align: left;
+      background: var(--bg-primary);
+      color: var(--text-secondary);
+      padding: 15px;
+      border-radius: 4px;
+      margin-top: 15px;
+      border: 1px solid var(--border-primary);
+
+      div {
+        margin-bottom: 8px;
+        font-size: 0.9em;
+      }
+
+      strong {
+        color: var(--text-primary);
+        display: inline-block;
+        width: 80px;
+      }
+    }
+
+    .file-upload-section {
+      margin-bottom: 40px;
+
+      h2 {
+        color: var(--text-primary);
+        font-size: 1.5em;
+        margin-bottom: 20px;
+        font-weight: 500;
+      }
+    }
+
+    .comparison-section {
+      .comparison {
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+        padding: 30px;
+        border-radius: 8px;
+        text-align: center;
+        border: 1px solid var(--border-primary);
+
+        h2 {
+          margin-bottom: 20px;
+          font-size: 1.8em;
+          font-weight: 500;
+        }
+      }
+    }
+
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-top: 25px;
+    }
+
+    .comparison-item {
+      background: var(--bg-hover);
+      color: var(--text-secondary);
+      padding: 20px;
+      border-radius: 4px;
+      border: 1px solid var(--border-secondary);
+
+      h4 {
+        margin-bottom: 10px;
+        font-size: 1.1em;
+        color: var(--text-primary);
+        font-weight: 500;
+      }
+    }
+
+    .comparison-value {
+      font-family: var(--font-mono);
+      font-size: 0.9em;
+      word-break: break-all;
+    }
+
+    .match {
+      color: var(--accent-green);
+      font-weight: 600;
+    }
+
+    .no-match {
+      color: var(--accent-red);
+      font-weight: 600;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .file-signature {
+      background: var(--bg-primary);
+      color: var(--text-secondary);
+      padding: 15px;
+      border-radius: 4px;
+      margin-top: 15px;
+      border: 1px solid var(--accent-blue);
+
+      h4 {
+        color: var(--accent-blue);
+        margin-bottom: 10px;
+        font-weight: 500;
+      }
+    }
+
+    .hex-display {
+      font-family: var(--font-mono);
+      background: var(--bg-primary);
+      color: var(--accent-green);
+      padding: 10px;
+      border-radius: 4px;
+      font-size: 0.85em;
+      letter-spacing: 1px;
+      border: 1px solid var(--border-primary);
+    }
+
+    @media (max-width: 768px) {
+      .content {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <h1>ファイル形式理解ツール</h1>
+      <p>拡張子を変えても、ファイルの中身は変わりません！実際に確認してみましょう。</p>
+    </header>
+
+    <main class="content">
+      <section class="file-upload-section">
+        <h2>ファイル比較</h2>
+        <div class="file-areas">
+          <div class="file-area" id="dropArea1">
+            <h3>元のファイル</h3>
+            <p>ここにファイルをドラッグ&ドロップしてください</p>
+            <div id="fileInfo1" class="file-info hidden"></div>
+            <div id="signature1" class="file-signature hidden"></div>
+          </div>
+
+          <div class="file-area" id="dropArea2">
+            <h3>拡張子を変更したファイル</h3>
+            <p>拡張子を変更したファイルをドラッグ&ドロップしてください</p>
+            <div id="fileInfo2" class="file-info hidden"></div>
+            <div id="signature2" class="file-signature hidden"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="comparison-section">
+        <div id="comparison" class="comparison hidden">
+          <h2>比較結果</h2>
+          <p id="comparisonMessage"></p>
+
+          <div class="comparison-grid">
+            <div class="comparison-item">
+              <h4>ファイルサイズ</h4>
+              <div id="sizeComparison" class="comparison-value"></div>
+            </div>
+
+            <div class="comparison-item">
+              <h4>MD5ハッシュ</h4>
+              <div id="hashComparison" class="comparison-value"></div>
+            </div>
+
+            <div class="comparison-item">
+              <h4>実際の形式</h4>
+              <div id="formatComparison" class="comparison-value"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    let file1 = null;
+    let file2 = null;
+
+    // 個別ファイル形式判定関数
+
+    /**
+     * BMP形式かどうかを判定する
+     * @param {Uint8Array} uint8Array - ファイルのバイト配列
+     * @returns {boolean} BMP形式の場合true
+     */
+    function isBMP(uint8Array) {
+      return uint8Array[0] === 0x42 && uint8Array[1] === 0x4D;
+    }
+
+    /**
+     * GIF形式かどうかを判定する
+     * @param {Uint8Array} uint8Array - ファイルのバイト配列
+     * @returns {boolean} GIF形式の場合true
+     */
+    function isGIF(uint8Array) {
+      return uint8Array[0] === 0x47 && uint8Array[1] === 0x49 && uint8Array[2] === 0x46;
+    }
+
+    /**
+     * JPEG形式かどうかを判定する
+     * @param {Uint8Array} uint8Array - ファイルのバイト配列
+     * @returns {boolean} JPEG形式の場合true
+     */
+    function isJPEG(uint8Array) {
+      return uint8Array[0] === 0xFF && uint8Array[1] === 0xD8 && uint8Array[2] === 0xFF;
+    }
+
+    /**
+     * PDF形式かどうかを判定する
+     * @param {Uint8Array} uint8Array - ファイルのバイト配列
+     * @returns {boolean} PDF形式の場合true
+     */
+    function isPDF(uint8Array) {
+      return uint8Array[0] === 0x25 && uint8Array[1] === 0x50 &&
+        uint8Array[2] === 0x44 && uint8Array[3] === 0x46;
+    }
+
+    /**
+     * PNG形式かどうかを判定する
+     * @param {Uint8Array} uint8Array - ファイルのバイト配列
+     * @returns {boolean} PNG形式の場合true
+     */
+    function isPNG(uint8Array) {
+      return uint8Array[0] === 0x89 && uint8Array[1] === 0x50 &&
+        uint8Array[2] === 0x4E && uint8Array[3] === 0x47;
+    }
+
+    /**
+     * PSD形式かどうかを判定する
+     * @param {Uint8Array} uint8Array - ファイルのバイト配列
+     * @returns {boolean} PSD形式の場合true
+     */
+    function isPSD(uint8Array) {
+      return uint8Array[0] === 0x38 && uint8Array[1] === 0x42 &&
+        uint8Array[2] === 0x50 && uint8Array[3] === 0x53;
+    }
+
+    /**
+     * WebP形式かどうかを判定する
+     * @param {Uint8Array} uint8Array - ファイルのバイト配列
+     * @returns {boolean} WebP形式の場合true
+     */
+    function isWebP(uint8Array) {
+      return uint8Array[0] === 0x52 && uint8Array[1] === 0x49 &&
+        uint8Array[2] === 0x46 && uint8Array[3] === 0x46 &&
+        uint8Array[8] === 0x57 && uint8Array[9] === 0x45 &&
+        uint8Array[10] === 0x42 && uint8Array[11] === 0x50;
+    }
+
+    /**
+     * ZIP形式かどうかを判定する
+     * @param {Uint8Array} uint8Array - ファイルのバイト配列
+     * @returns {boolean} ZIP形式の場合true
+     */
+    function isZIP(uint8Array) {
+      return uint8Array[0] === 0x50 && uint8Array[1] === 0x4B &&
+        (uint8Array[2] === 0x03 || uint8Array[2] === 0x05);
+    }
+
+    /**
+     * ファイル形式を検出する
+     * @param {ArrayBuffer} arrayBuffer - ファイルデータ
+     * @returns {{format: string, signature: string, description: string}} 検出結果オブジェクト
+     */
+    function detectFileFormat(arrayBuffer) {
+      const uint8Array = new Uint8Array(arrayBuffer);
+      const firstBytes = Array.from(uint8Array.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join(' ').toUpperCase();
+
+      // ファイル形式の検出
+      if (isJPEG(uint8Array)) {
+        return { format: 'JPEG', signature: firstBytes, description: 'JPEG画像ファイル' };
+      }
+
+      if (isPNG(uint8Array)) {
+        return { format: 'PNG', signature: firstBytes, description: 'PNG画像ファイル' };
+      }
+
+      if (isPDF(uint8Array)) {
+        return { format: 'PDF', signature: firstBytes, description: 'PDFファイル' };
+      }
+
+      if (isZIP(uint8Array)) {
+        return { format: 'ZIP', signature: firstBytes, description: 'ZIP圧縮ファイル' };
+      }
+
+      if (isGIF(uint8Array)) {
+        return { format: 'GIF', signature: firstBytes, description: 'GIF画像ファイル' };
+      }
+
+      if (isBMP(uint8Array)) {
+        return { format: 'BMP', signature: firstBytes, description: 'BMP画像ファイル' };
+      }
+
+      if (isPSD(uint8Array)) {
+        return { format: 'PSD', signature: firstBytes, description: 'Photoshop画像ファイル' };
+      }
+
+      if (isWebP(uint8Array)) {
+        return { format: 'WebP', signature: firstBytes, description: 'WebP画像ファイル' };
+      }
+
+      return { format: '不明', signature: firstBytes, description: '不明な形式' };
+    }
+
+    /**
+     * MD5ハッシュを計算する
+     * @param {ArrayBuffer} arrayBuffer - ファイルデータ
+     * @returns {string} MD5ハッシュ値（16進数文字列）
+     */
+    function calculateMD5(arrayBuffer) {
+      const wordArray = CryptoJS.lib.WordArray.create(arrayBuffer);
+      return CryptoJS.MD5(wordArray).toString();
+    }
+
+    /**
+     * ファイル情報を表示する
+     * @param {File} file - ファイルオブジェクト
+     * @param {ArrayBuffer} arrayBuffer - ファイルデータ
+     * @param {number} areaId - 表示エリアのID（1または2）
+     * @returns {{file: File, arrayBuffer: ArrayBuffer, formatInfo: Object, hash: string}} ファイル情報オブジェクト
+     */
+    function displayFileInfo(file, arrayBuffer, areaId) {
+      const fileInfo = document.getElementById(`fileInfo${areaId}`);
+      const signature = document.getElementById(`signature${areaId}`);
+      const formatInfo = detectFileFormat(arrayBuffer);
+      const hash = calculateMD5(arrayBuffer);
+
+      fileInfo.innerHTML = `
+                <div><strong>名前:</strong> ${file.name}</div>
+                <div><strong>サイズ:</strong> ${file.size.toLocaleString()} バイト</div>
+                <div><strong>拡張子:</strong> ${file.name.split('.').pop().toUpperCase()}</div>
+                <div><strong>MD5:</strong> <span style="font-family: var(--font-mono); font-size: 0.8em;">${hash}</span></div>
+            `;
+
+      signature.innerHTML = `
+                <h4>実際のファイル形式: ${formatInfo.format}</h4>
+                <div><strong>説明:</strong> ${formatInfo.description}</div>
+                <div><strong>ファイルヘッダー:</strong></div>
+                <div class="hex-display">${formatInfo.signature}</div>
+            `;
+
+      fileInfo.classList.remove('hidden');
+      signature.classList.remove('hidden');
+
+      return { file, arrayBuffer, formatInfo, hash };
+    }
+
+    /**
+     * 2つのファイルを比較して結果を表示する
+     */
+    function compareFiles() {
+      if (!file1 || !file2) return;
+
+      const comparison = document.getElementById('comparison');
+      const message = document.getElementById('comparisonMessage');
+      const sizeComp = document.getElementById('sizeComparison');
+      const hashComp = document.getElementById('hashComparison');
+      const formatComp = document.getElementById('formatComparison');
+
+      const sizeMatch = file1.file.size === file2.file.size;
+      const hashMatch = file1.hash === file2.hash;
+      const formatMatch = file1.formatInfo.format === file2.formatInfo.format;
+
+      if (sizeMatch && hashMatch && formatMatch) {
+        message.innerHTML = '<strong>完全に同じファイルです！</strong><br>拡張子を変更しても、ファイルの中身は全く変わっていません。';
+        message.style.background = 'rgba(76, 175, 80, 0.3)';
+      } else {
+        message.innerHTML = '<strong>異なるファイルです</strong><br>これらは実際に異なるファイルです。';
+        message.style.background = 'rgba(244, 67, 54, 0.3)';
+      }
+
+      sizeComp.innerHTML = `
+                ${file1.file.size.toLocaleString()}バイト vs ${file2.file.size.toLocaleString()}バイト
+                <br><span class="${sizeMatch ? 'match' : 'no-match'}">${sizeMatch ? '同じ' : '異なる'}</span>
+            `;
+
+      hashComp.innerHTML = `
+                <div style="font-size: 0.7em; margin-bottom: 5px;">${file1.hash}</div>
+                <div style="font-size: 0.7em; margin-bottom: 5px;">${file2.hash}</div>
+                <span class="${hashMatch ? 'match' : 'no-match'}">${hashMatch ? '同じ' : '異なる'}</span>
+            `;
+
+      formatComp.innerHTML = `
+                ${file1.formatInfo.format} vs ${file2.formatInfo.format}
+                <br><span class="${formatMatch ? 'match' : 'no-match'}">${formatMatch ? '同じ形式' : '異なる形式'}</span>
+            `;
+
+      comparison.classList.remove('hidden');
+    }
+
+    /**
+     * ドラッグ&ドロップエリアを設定する
+     * @param {number} areaId - エリアのID（1または2）
+     */
+    function setupDropArea(areaId) {
+      const dropArea = document.getElementById(`dropArea${areaId}`);
+
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, preventDefaults, false);
+      });
+
+      /**
+       * デフォルトのイベント動作を防ぐ
+       * @param {Event} e - イベントオブジェクト
+       */
+      function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+
+      ['dragenter', 'dragover'].forEach(eventName => {
+        dropArea.addEventListener(eventName, () => dropArea.classList.add('dragover'), false);
+      });
+
+      ['dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, () => dropArea.classList.remove('dragover'), false);
+      });
+
+      dropArea.addEventListener('drop', handleDrop, false);
+
+      /**
+       * ファイルドロップ時の処理
+       * @param {DragEvent} e - ドラッグイベント
+       */
+      function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+
+        if (files.length > 0) {
+          const file = files[0];
+          const reader = new FileReader();
+
+          reader.onload = function (event) {
+            const arrayBuffer = event.target.result;
+            const fileData = displayFileInfo(file, arrayBuffer, areaId);
+
+            if (areaId === 1) {
+              file1 = fileData;
+            } else {
+              file2 = fileData;
+            }
+
+            compareFiles();
+          };
+
+          reader.readAsArrayBuffer(file);
+        }
+      }
+    }
+
+    // 初期化
+    setupDropArea(1);
+    setupDropArea(2);
+  </script>
+</body>
+
+</html>
