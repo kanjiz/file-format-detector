@@ -1,0 +1,17 @@
+# Node.js / Web projects
+node_modules/
+dist/
+build/
+*.log
+*.tmp
+.DS_Store
+.env
+# OS generated files
+Thumbs.db
+# VS Code
+.vscode/
+# MacOS
+*.DS_Store
+# HTML/JS/CSS artifacts
+*.min.js
+*.min.css
