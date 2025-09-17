@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ファイル形式理解ツール</title>
+  <title>ファイル形式検出ツール</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"
     integrity="sha512-a+SUDuwNzXDvz4XrIcXHuCf089/iJAoN4lmrXJg18XnduKK6YlDHNRalv4yd1N40OKI80tFidF+rqTFKGPoWFQ=="
     crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -209,6 +209,11 @@
       font-weight: 600;
     }
 
+    .unavailable {
+      color: var(--text-subtle);
+      font-weight: 600;
+    }
+
     .hidden {
       display: none;
     }
@@ -244,6 +249,21 @@
         padding: 20px;
       }
     }
+
+    .crypto-notice {
+      background: rgba(255, 193, 7, 0.1);
+      border: 1px solid rgba(255, 193, 7, 0.3);
+      color: var(--text-muted);
+      padding: 12px 20px;
+      text-align: center;
+      font-size: 0.9em;
+      border-radius: 0;
+      margin: 0;
+    }
+
+    .crypto-notice.hidden {
+      display: none;
+    }
   </style>
 </head>
 
@@ -254,20 +274,24 @@
       <p>拡張子を変えても、ファイルの中身は変わりません！実際に確認してみましょう。</p>
     </header>
 
+    <div id="cryptoNotice" class="crypto-notice hidden">
+      ⚠️ オフライン環境で動作中です。MD5ハッシュは表示されませんが、ファイルサイズと形式による比較は正常に機能します。
+    </div>
+
     <main class="content">
       <section class="file-upload-section">
         <h2>ファイル比較</h2>
         <div class="file-areas">
           <div class="file-area" id="dropArea1">
             <h3>元のファイル</h3>
-            <p>ここにファイルをドラッグ&ドロップしてください</p>
+            <p>ここにファイルをドラッグ&amp;ドロップしてください</p>
             <div id="fileInfo1" class="file-info hidden"></div>
             <div id="signature1" class="file-signature hidden"></div>
           </div>
 
           <div class="file-area" id="dropArea2">
             <h3>拡張子を変更したファイル</h3>
-            <p>拡張子を変更したファイルをドラッグ&ドロップしてください</p>
+            <p>拡張子を変更したファイルをドラッグ&amp;ドロップしてください</p>
             <div id="fileInfo2" class="file-info hidden"></div>
             <div id="signature2" class="file-signature hidden"></div>
           </div>
@@ -301,8 +325,25 @@
   </div>
 
   <script>
+    /**
+     * ファイル1のデータを保持するグローバル変数
+     * @type {Object|null}
+     */
     let file1 = null;
+
+    /**
+     * ファイル2のデータを保持するグローバル変数
+     * @type {Object|null}
+     */
     let file2 = null;
+
+    /**
+     * CryptoJSライブラリが利用可能かどうかを判定する
+     * @returns {boolean} CryptoJSが利用可能な場合true
+     */
+    function canUseCrypto() {
+      return typeof CryptoJS !== 'undefined' && CryptoJS.MD5;
+    }
 
     // 個別ファイル形式判定関数
 
@@ -431,13 +472,46 @@
     }
 
     /**
-     * MD5ハッシュを計算する
+     * MD5ハッシュを計算する（CryptoJSが利用可能な場合のみ）
      * @param {ArrayBuffer} arrayBuffer - ファイルデータ
-     * @returns {string} MD5ハッシュ値（16進数文字列）
+     * @returns {string} MD5ハッシュ値（16進数文字列）または代替メッセージ
      */
     function calculateMD5(arrayBuffer) {
-      const wordArray = CryptoJS.lib.WordArray.create(arrayBuffer);
-      return CryptoJS.MD5(wordArray).toString();
+      if (canUseCrypto()) {
+        const wordArray = CryptoJS.lib.WordArray.create(arrayBuffer);
+        return CryptoJS.MD5(wordArray).toString();
+      } else {
+        return '利用不可（オフライン環境）';
+      }
+    }
+
+    /**
+     * ファイル基本情報のHTMLを生成する
+     * @param {File} file - ファイルオブジェクト
+     * @param {string} hash - MD5ハッシュ値
+     * @returns {string} ファイル情報のHTML
+     */
+    function createFileInfoHTML(file, hash) {
+      return `
+                <div><strong>名前:</strong> ${file.name}</div>
+                <div><strong>サイズ:</strong> ${file.size.toLocaleString()} バイト</div>
+                <div><strong>拡張子:</strong> ${file.name.split('.').pop().toUpperCase()}</div>
+                <div><strong>MD5:</strong> <span style="font-family: var(--font-mono); font-size: 0.8em;">${hash}</span></div>
+            `;
+    }
+
+    /**
+     * ファイル形式情報のHTMLを生成する
+     * @param {Object} formatInfo - ファイル形式情報
+     * @returns {string} 形式情報のHTML
+     */
+    function createSignatureHTML(formatInfo) {
+      return `
+                <h4>実際のファイル形式: ${formatInfo.format}</h4>
+                <div><strong>説明:</strong> ${formatInfo.description}</div>
+                <div><strong>ファイルヘッダー:</strong></div>
+                <div class="hex-display">${formatInfo.signature}</div>
+            `;
     }
 
     /**
@@ -453,24 +527,164 @@
       const formatInfo = detectFileFormat(arrayBuffer);
       const hash = calculateMD5(arrayBuffer);
 
-      fileInfo.innerHTML = `
-                <div><strong>名前:</strong> ${file.name}</div>
-                <div><strong>サイズ:</strong> ${file.size.toLocaleString()} バイト</div>
-                <div><strong>拡張子:</strong> ${file.name.split('.').pop().toUpperCase()}</div>
-                <div><strong>MD5:</strong> <span style="font-family: var(--font-mono); font-size: 0.8em;">${hash}</span></div>
-            `;
-
-      signature.innerHTML = `
-                <h4>実際のファイル形式: ${formatInfo.format}</h4>
-                <div><strong>説明:</strong> ${formatInfo.description}</div>
-                <div><strong>ファイルヘッダー:</strong></div>
-                <div class="hex-display">${formatInfo.signature}</div>
-            `;
+      fileInfo.innerHTML = createFileInfoHTML(file, hash);
+      signature.innerHTML = createSignatureHTML(formatInfo);
 
       fileInfo.classList.remove('hidden');
       signature.classList.remove('hidden');
 
       return { file, arrayBuffer, formatInfo, hash };
+    }
+
+    /**
+     * ファイル比較項目の定義配列
+     * 各項目には以下のプロパティが含まれる：
+     * @typedef {Object} ComparisonDefinition
+     * @property {string} key - 比較項目のキー（DOM要素IDに使用）
+     * @property {function(Object): *} getValue - ファイルデータから値を取得する関数
+     * @property {string} displayName - 表示用の名前
+     * @property {function(): boolean} [isAvailable] - この比較項目が利用可能かを判定する関数（オプション）
+     * @property {function(*, *): string} formatDisplay - 2つの値を比較表示用文字列に変換する関数
+     *
+     * @type {ComparisonDefinition[]}
+     */
+    const COMPARISON_DEFINITIONS = [
+      {
+        key: 'size',
+        getValue: (fileData) => fileData.file.size,
+        displayName: 'ファイルサイズ',
+        formatDisplay: (val1, val2) => `${val1.toLocaleString()}バイト vs ${val2.toLocaleString()}バイト`
+      },
+      {
+        key: 'hash',
+        getValue: (fileData) => fileData.hash,
+        displayName: 'MD5ハッシュ',
+        isAvailable: () => canUseCrypto(),
+        formatDisplay: (val1, val2) => `
+          <div style="font-size: 0.7em; margin-bottom: 5px;">${val1}</div>
+          <div style="font-size: 0.7em; margin-bottom: 5px;">${val2}</div>`
+      },
+      {
+        key: 'format',
+        getValue: (fileData) => fileData.formatInfo.format,
+        displayName: '実際の形式',
+        formatDisplay: (val1, val2) => `${val1} vs ${val2}`
+      }
+    ];
+
+    /**
+     * ファイル比較結果を作成する
+     * @typedef {Object} ComparisonResult
+     * @property {*} file1Value - ファイル1の値
+     * @property {*} file2Value - ファイル2の値
+     * @property {boolean|null} match - 値が一致するか（null=比較不可）
+     * @property {boolean} isAvailable - この比較項目が利用可能か
+     * @property {string} displayName - 表示用の名前
+     * @property {function(*, *): string} formatDisplay - 表示用フォーマット関数
+     *
+     * @param {Object} file1 - ファイル1のデータ
+     * @param {Object} file2 - ファイル2のデータ
+     * @returns {Object.<string, ComparisonResult>} 比較結果オブジェクト（キーは比較項目のkey）
+     */
+    function createComparisons(file1, file2) {
+      return COMPARISON_DEFINITIONS.reduce((acc, def) => {
+        const isAvailable = def.isAvailable ? def.isAvailable() : true;
+        const val1 = def.getValue(file1);
+        const val2 = def.getValue(file2);
+
+        acc[def.key] = {
+          file1Value: val1,
+          file2Value: val2,
+          match: isAvailable ? val1 === val2 : null,
+          isAvailable,
+          displayName: def.displayName,
+          formatDisplay: def.formatDisplay
+        };
+        return acc;
+      }, {});
+    }
+    /**
+     * 比較メッセージを生成する
+     * @param {Object.<string, ComparisonResult>} comparisons - 比較結果オブジェクト
+     * @returns {{message: string, background: string}} メッセージ情報
+     */
+    function createComparisonMessage(comparisons) {
+      const allMatch = Object.values(comparisons).every(comp =>
+        comp.match === true || comp.match === null
+      );
+      const hasUnavailable = Object.values(comparisons).some(comp =>
+        comp.match === null
+      );
+
+      if (allMatch) {
+        let message = '<strong>完全に同じファイルです！</strong><br>拡張子を変更しても、ファイルの中身は全く変わっていません。';
+        if (hasUnavailable) {
+          message += '<br><small>※ MD5ハッシュは利用できませんが、ファイルサイズと形式で確認できました。</small>';
+        }
+        return { message, background: 'rgba(76, 175, 80, 0.3)' };
+      } else {
+        return {
+          message: '<strong>異なるファイルです</strong><br>これらは実際に異なるファイルです。',
+          background: 'rgba(244, 67, 54, 0.3)'
+        };
+      }
+    }
+
+    /**
+     * 比較結果のマッチテキストを生成する
+     * @param {boolean|null} match - マッチ結果（true=同じ, false=異なる, null=比較不可）
+     * @param {string} key - 比較項目のキー
+     * @returns {string} 表示用のマッチテキスト
+     */
+    function getMatchText(match, key) {
+      if (match === null) {
+        return '比較不可';
+      }
+
+      if (match) {
+        return '同じ';
+      }
+
+      // 異なる場合、項目によってテキストを変える
+      switch (key) {
+        case 'format':
+          return '異なる形式';
+        default:
+          return '異なる';
+      }
+    }
+
+    /**
+     * 比較結果のCSSクラス名を生成する
+     * @param {boolean|null} match - マッチ結果（true=同じ, false=異なる, null=比較不可）
+     * @returns {string} CSSクラス名
+     */
+    function getMatchClass(match) {
+      if (match === null) {
+        return 'unavailable';
+      }
+
+      return match ? 'match' : 'no-match';
+    }
+
+    /**
+     * 比較結果の詳細を表示する
+     * @param {Object.<string, ComparisonResult>} comparisons - 比較結果オブジェクト
+     */
+    function displayComparisonDetails(comparisons) {
+      Object.entries(comparisons).forEach(([key, comp]) => {
+        const element = document.getElementById(`${key}Comparison`);
+        if (!element) return;
+
+        const displayText = comp.formatDisplay(comp.file1Value, comp.file2Value);
+        const matchClass = getMatchClass(comp.match);
+        const matchText = getMatchText(comp.match, key);
+
+        element.innerHTML = `
+          ${displayText}
+          <br><span class="${matchClass}">${matchText}</span>
+        `;
+      });
     }
 
     /**
@@ -481,56 +695,26 @@
 
       const comparison = document.getElementById('comparison');
       const message = document.getElementById('comparisonMessage');
-      const sizeComp = document.getElementById('sizeComparison');
-      const hashComp = document.getElementById('hashComparison');
-      const formatComp = document.getElementById('formatComparison');
 
-      const sizeMatch = file1.file.size === file2.file.size;
-      const hashMatch = file1.hash === file2.hash;
-      const formatMatch = file1.formatInfo.format === file2.formatInfo.format;
+      const comparisons = createComparisons(file1, file2);
+      const messageInfo = createComparisonMessage(comparisons);
 
-      if (sizeMatch && hashMatch && formatMatch) {
-        message.innerHTML = '<strong>完全に同じファイルです！</strong><br>拡張子を変更しても、ファイルの中身は全く変わっていません。';
-        message.style.background = 'rgba(76, 175, 80, 0.3)';
-      } else {
-        message.innerHTML = '<strong>異なるファイルです</strong><br>これらは実際に異なるファイルです。';
-        message.style.background = 'rgba(244, 67, 54, 0.3)';
-      }
+      message.innerHTML = messageInfo.message;
+      message.style.background = messageInfo.background;
 
-      sizeComp.innerHTML = `
-                ${file1.file.size.toLocaleString()}バイト vs ${file2.file.size.toLocaleString()}バイト
-                <br><span class="${sizeMatch ? 'match' : 'no-match'}">${sizeMatch ? '同じ' : '異なる'}</span>
-            `;
-
-      hashComp.innerHTML = `
-                <div style="font-size: 0.7em; margin-bottom: 5px;">${file1.hash}</div>
-                <div style="font-size: 0.7em; margin-bottom: 5px;">${file2.hash}</div>
-                <span class="${hashMatch ? 'match' : 'no-match'}">${hashMatch ? '同じ' : '異なる'}</span>
-            `;
-
-      formatComp.innerHTML = `
-                ${file1.formatInfo.format} vs ${file2.formatInfo.format}
-                <br><span class="${formatMatch ? 'match' : 'no-match'}">${formatMatch ? '同じ形式' : '異なる形式'}</span>
-            `;
-
+      displayComparisonDetails(comparisons);
       comparison.classList.remove('hidden');
     }
 
     /**
-     * ドラッグ&ドロップエリアを設定する
-     * @param {number} areaId - エリアのID（1または2）
+     * ドラッグ&ドロップイベントを設定する
+     * @param {HTMLElement} dropArea - ドロップエリア要素
      */
-    function setupDropArea(areaId) {
-      const dropArea = document.getElementById(`dropArea${areaId}`);
-
+    function setupDragEvents(dropArea) {
       ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         dropArea.addEventListener(eventName, preventDefaults, false);
       });
 
-      /**
-       * デフォルトのイベント動作を防ぐ
-       * @param {Event} e - イベントオブジェクト
-       */
       function preventDefaults(e) {
         e.preventDefault();
         e.stopPropagation();
@@ -543,42 +727,69 @@
       ['dragleave', 'drop'].forEach(eventName => {
         dropArea.addEventListener(eventName, () => dropArea.classList.remove('dragover'), false);
       });
+    }
 
-      dropArea.addEventListener('drop', handleDrop, false);
+    /**
+     * ファイル読み込み完了時の処理
+     * @param {File} file - ファイルオブジェクト
+     * @param {ArrayBuffer} arrayBuffer - ファイルデータ
+     * @param {number} areaId - エリアID
+     */
+    function handleFileLoad(file, arrayBuffer, areaId) {
+      const fileData = displayFileInfo(file, arrayBuffer, areaId);
 
-      /**
-       * ファイルドロップ時の処理
-       * @param {DragEvent} e - ドラッグイベント
-       */
-      function handleDrop(e) {
-        const dt = e.dataTransfer;
-        const files = dt.files;
+      if (areaId === 1) {
+        file1 = fileData;
+      } else {
+        file2 = fileData;
+      }
 
-        if (files.length > 0) {
-          const file = files[0];
-          const reader = new FileReader();
+      compareFiles();
+    }
 
-          reader.onload = function (event) {
-            const arrayBuffer = event.target.result;
-            const fileData = displayFileInfo(file, arrayBuffer, areaId);
+    /**
+     * ファイルドロップ時の処理
+     * @param {DragEvent} e - ドラッグイベント
+     * @param {number} areaId - エリアID
+     */
+    function handleFileDrop(e, areaId) {
+      const files = e.dataTransfer.files;
 
-            if (areaId === 1) {
-              file1 = fileData;
-            } else {
-              file2 = fileData;
-            }
+      if (files.length > 0) {
+        const file = files[0];
+        const reader = new FileReader();
 
-            compareFiles();
-          };
+        reader.onload = function (event) {
+          handleFileLoad(file, event.target.result, areaId);
+        };
 
-          reader.readAsArrayBuffer(file);
-        }
+        reader.readAsArrayBuffer(file);
       }
     }
 
-    // 初期化
-    setupDropArea(1);
-    setupDropArea(2);
+    /**
+     * ドラッグ&ドロップエリアを設定する
+     * @param {number} areaId - エリアのID（1または2）
+     */
+    function setupDropArea(areaId) {
+      const dropArea = document.getElementById(`dropArea${areaId}`);
+
+      setupDragEvents(dropArea);
+      dropArea.addEventListener('drop', (e) => handleFileDrop(e, areaId), false);
+    }
+
+    // DOM読み込み完了後の初期化処理
+    document.addEventListener('DOMContentLoaded', function () {
+      // CryptoJSの状態チェックと通知表示
+      if (!canUseCrypto()) {
+        const notice = document.getElementById('cryptoNotice');
+        notice.classList.remove('hidden');
+      }
+
+      // ドロップエリアの初期化
+      setupDropArea(1);
+      setupDropArea(2);
+    });
   </script>
 </body>
 
