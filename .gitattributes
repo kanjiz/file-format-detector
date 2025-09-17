@@ -1,7 +1,58 @@
-# Set default text file handling
+# Set default behavior to automatically normalize line endings
 * text=auto
-# Treat HTML, JS, CSS as UTF-8
-*.html text eol=lf
+
+# Explicitly declare text files you want to always be normalized and converted
+# to native line endings on checkout
+*.ts text eol=lf
 *.js text eol=lf
+*.json text eol=lf
+*.html text eol=lf
 *.css text eol=lf
 *.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Declare files that will always have CRLF line endings on checkout
+*.bat text eol=crlf
+
+# Denote all files that should not have line endings normalized
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.mov binary
+*.mp4 binary
+*.mp3 binary
+*.flv binary
+*.fla binary
+*.swf binary
+*.gz binary
+*.zip binary
+*.7z binary
+*.ttf binary
+*.eot binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
+
+# Force specific files to be treated as binary
+lib/*.min.js binary
+lib/*.min.css binary
+
+# Archive files should be left untouched
+*.zip binary
+*.tar binary
+*.gz binary
+
+# Language specific
+*.sql text eol=lf
+*.sh text eol=lf
+*.ps1 text eol=crlf
+
+# Documentation
+*.txt text eol=lf
+*.md text eol=lf
+LICENSE text eol=lf
+README* text eol=lf
+

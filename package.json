@@ -1,0 +1,38 @@
+{
+  "name": "file-format-detector",
+  "version": "1.0.0",
+  "description": "| 形式 | 拡張子 | ファイルシグネチャ | 説明 | |------|--------|-------------------|------| | **JPEG** | .jpg, .jpeg | `FF D8 FF` | JPEG画像ファイル | | **PNG** | .png | `89 50 4E 47` | PNG画像ファイル | | **GIF** | .gif | `47 49 46` | GIF画像ファイル | | **BMP** | .bmp | `42 4D` | BMP画像ファイル | | **WebP** | .webp | `52 49 46 46` + `57 45 42 50` | WebP画像ファイル | | **PSD** | .psd | `38 42 50 53` | Photoshop画像ファイル |",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "lib": "lib"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "type-check": "tsc --noEmit",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kanjiz/file-format-detector.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/kanjiz/file-format-detector/issues"
+  },
+  "homepage": "https://github.com/kanjiz/file-format-detector#readme",
+  "devDependencies": {
+    "@types/crypto-js": "^4.2.2",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.5",
+    "vite-plugin-singlefile": "^2.3.0"
+  },
+  "dependencies": {
+    "crypto-js": "^4.2.0"
+  }
+}
