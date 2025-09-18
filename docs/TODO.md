@@ -12,18 +12,20 @@
 - [x] lib/フォルダ自動コピー機能
 - [x] ドキュメント整理（README.md, docs/）
 - [x] Git設定ファイル整備（.gitignore, .gitattributes, .editorconfig）
+- [x] **型定義の作成** - `src/types/index.ts`
+  - [x] `FileData` インターフェース
+  - [x] `FormatInfo` インターフェース  
+  - [x] `ComparisonResult` インターフェース
+  - [x] `ComparisonDefinition` インターフェース
+  - [x] `ComparisonMessage` インターフェース
+  - [x] イベントハンドラーの型定義
+  - [x] 詳細なJSDoc記述
 
 ## 🚀 最優先タスク（Phase 1）
 
 ### 既存コードのTypeScript移行
 
-- [ ] **型定義の作成**
-  - [ ] `FileData` インターフェース
-  - [ ] `FormatInfo` インターフェース  
-  - [ ] `ComparisonResult` インターフェース
-  - [ ] イベントハンドラーの型定義
-
-- [ ] **コアロジックの移行**
+- [ ] **コアロジックの移行** ← 🎯 **次のタスク**
   - [ ] ファイル形式検出関数群 (`isJPEG`, `isPNG`, etc.)
   - [ ] `detectFileFormat` 関数
   - [ ] `calculateMD5` 関数
@@ -127,9 +129,11 @@
 
 ## 📊 進捗管理
 
-### Phase 1 進捗: 0% (0/XX)
+### Phase 1 進捗: 12% (1/8)
 
-- 既存コードのTypeScript移行
+- ✅ 型定義作成 **完了**
+- 🚧 コアロジック移行 **次**
+- ⭐ UI制御移行 **待機**
 
 ### Phase 2 進捗: 0% (0/XX)  
 
@@ -142,5 +146,6 @@
 ---
 
 **最終更新**: 2025年9月17日  
-**現在のフォーカス**: TypeScript移行  
+**現在のフォーカス**: **Step 2: ファイル検出モジュール作成** (`src/modules/file-detector.ts`)  
+**完了**: Step 1 型定義作成  
 **次回レビュー**: Phase 1完了時
