@@ -170,22 +170,6 @@ file-format-detector-v1.0.0.zip
 - ウイルススキャン実施
 - 配布時期の記録
 
-### 3. 内部サーバー配置
-
-**対象**: イントラネット環境
-
-**手順**:
-
-```bash
-# サーバー配置例
-/var/www/html/tools/
-├── file-format-detector.html
-└── lib/
-    └── crypto-js.min.js
-```
-
-**アクセス**: `https://internal.company.com/tools/file-format-detector.html`
-
 ## ビルド設定詳細
 
 ### Vite設定のポイント
